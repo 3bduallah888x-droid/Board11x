@@ -1,0 +1,816 @@
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#10121c">
+<title>ART STUDIO PRO</title>
+
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#10121c;color:#fff;font-family:Arial,sans-serif;overflow:hidden}
+button,input,select{font-family:inherit}
+button{border:0;background:#292e42;color:white;border-radius:9px;padding:9px;cursor:pointer}
+button:active{background:#7655d8}
+header{height:55px;background:#191d2c;display:flex;align-items:center;justify-content:space-between;padding:0 10px;border-bottom:1px solid #34394c}
+.logo{font-size:19px;font-weight:bold;color:#a78bfa}
+.logo span{color:white}
+.header-buttons{display:flex;gap:5px}
+.header-buttons button{font-size:17px}
+.toolbar{background:#191d2c;padding:7px;display:flex;gap:6px;flex-wrap:wrap;justify-content:center;border-bottom:1px solid #34394c}
+.tool{width:40px;height:40px;min-width:40px;padding:4px;display:flex;align-items:center;justify-content:center;font-size:0}
+.tool .symbol{font-size:21px}
+.tool.active{background:#7655d8;outline:2px solid #aa91ff}
+.settings{background:#191d2c;padding:8px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:12px}
+.settings label{display:flex;align-items:center;gap:4px}
+input[type=range]{width:70px;accent-color:#a78bfa}
+input[type=color]{width:32px;height:29px;background:none;border:0;padding:0}
+select{background:#292e42;color:white;border:0;padding:7px;border-radius:7px;max-width:115px}
+.main{height:calc(100dvh - 55px);display:flex;flex-direction:column}
+.stage{flex:1;min-height:0;overflow:auto;background:#0b0e17;position:relative;padding:12px;touch-action:pan-x pan-y}
+.board{width:100%;height:100%;min-height:300px;position:relative;background:white;margin:auto;transform-origin:top center;border-radius:3px;overflow:visible}
+.layer{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
+.overlay{position:absolute;inset:0;pointer-events:none;overflow:visible}
+.floating-tool{position:absolute;z-index:10;display:none;touch-action:none;user-select:none;cursor:move}
+.ruler{width:90%;height:52px;left:5%;top:35%;background:#fff9;border:1px solid #9ca3af;border-radius:4px;color:#111}
+.ruler svg{width:100%;height:100%}
+.protractor{width:260px;height:150px;left:calc(50% - 130px);top:25%;color:#111;background:#ffffffcc;border-radius:130px 130px 0 0}
+.protractor svg{width:100%;height:100%}
+.footer{background:#191d2c;padding:7px;display:flex;justify-content:center;gap:7px;flex-wrap:wrap}
+.footer button{width:40px;height:40px;font-size:19px;padding:5px}
+.panel{background:#191d2c;border-top:1px solid #34394c;padding:8px;display:none;max-height:180px;overflow:auto}
+.layer-row{display:flex;align-items:center;gap:7px;margin:5px 0;padding:6px;background:#292e42;border-radius:8px}
+.layer-row button{padding:6px}
+.layer-row.active{outline:2px solid #a78bfa}
+.layer-name{flex:1;font-size:13px}
+.modal{display:none;position:fixed;inset:0;background:#000b;z-index:50;align-items:center;justify-content:center;padding:15px}
+.modalbox{background:#202538;border-radius:15px;padding:18px;width:min(360px,100%);max-height:85vh;overflow:auto}
+.modalbox input{width:100%;padding:10px;margin:7px 0;background:#111827;color:white;border:1px solid #555;border-radius:7px}
+.modalbox button{margin:3px}
+.primary{background:#7655d8}
+#toast{position:fixed;bottom:70px;left:50%;transform:translateX(-50%);background:#7655d8;padding:10px 16px;border-radius:20px;display:none;z-index:100;white-space:nowrap}
+@media(max-width:420px){
+ .tool{width:36px;height:36px;min-width:36px}
+ .tool .symbol{font-size:19px}
+ .settings{gap:6px}
+ input[type=range]{width:55px}
+}
+</style>
+</head>
+
+<body>
+
+<header>
+ <div class="logo">ART <span>STUDIO PRO</span></div>
+ <div class="header-buttons">
+  <button onclick="undo()" title="تراجع">↶</button>
+  <button onclick="redo()" title="إعادة">↷</button>
+  <button onclick="zoom(-.1)" title="تصغير">−</button>
+  <button onclick="zoom(.1)" title="تكبير">＋</button>
+  <button class="primary" onclick="exportPNG()" title="تصدير">⬇</button>
+ </div>
+</header>
+
+<div class="main">
+
+<div class="toolbar">
+ <button class="tool active" data-tool="brush" title="فرشاة"><span class="symbol">🖌️</span></button>
+ <button class="tool" data-tool="pencil" title="رصاص"><span class="symbol">✏️</span></button>
+ <button class="tool" data-tool="pen" title="حبر"><span class="symbol">🖊️</span></button>
+ <button class="tool" data-tool="soft" title="ناعمة"><span class="symbol">🌫️</span></button>
+ <button class="tool" data-tool="oil" title="زيتية"><span class="symbol">🎨</span></button>
+ <button class="tool" data-tool="water" title="مائية"><span class="symbol">💧</span></button>
+ <button class="tool" data-tool="charcoal" title="فحم"><span class="symbol">🖍️</span></button>
+ <button class="tool" data-tool="neon" title="نيون"><span class="symbol">💡</span></button>
+ <button class="tool" data-tool="eraser" title="ممحاة"><span class="symbol">🧽</span></button>
+
+ <button class="tool" data-tool="line" title="خط"><span class="symbol">／</span></button>
+ <button class="tool" data-tool="rect" title="مستطيل"><span class="symbol">▭</span></button>
+ <button class="tool" data-tool="circle" title="دائرة"><span class="symbol">◯</span></button>
+ <button class="tool" data-tool="triangle" title="مثلث"><span class="symbol">△</span></button>
+ <button class="tool" data-tool="arrow" title="سهم"><span class="symbol">➜</span></button>
+ <button class="tool" data-tool="text" title="نص"><span class="symbol">T</span></button>
+ <button class="tool" data-tool="chart" title="رسم بياني"><span class="symbol">📊</span></button>
+ <button class="tool" data-tool="move" title="تحريك الطبقة"><span class="symbol">✥</span></button>
+</div>
+
+<div class="settings">
+ <label title="اللون">🎨<input type="color" id="color" value="#222222"></label>
+ <label title="الحجم">◉<input type="range" id="size" min="1" max="60" value="5"><span id="sizeVal">5</span></label>
+ <label title="الشفافية">◐<input type="range" id="opacity" min="5" max="100" value="100"></label>
+ <label title="الخلفية">▣
+  <select id="bg">
+   <option value="#ffffff">أبيض</option>
+   <option value="#000000">أسود</option>
+   <option value="#f1f0e8">ورقي</option>
+   <option value="#dbeafe">أزرق</option>
+   <option value="#fce7f3">وردي</option>
+   <option value="#dcfce7">أخضر</option>
+   <option value="#1e293b">داكن</option>
+   <option value="#ede9fe">بنفسجي</option>
+   <option value="#fff7ed">كريمي</option>
+  </select>
+ </label>
+ <label title="نوع الفرشاة">✒️
+  <select id="brushShape">
+   <option value="round">دائرية</option>
+   <option value="square">مربعة</option>
+  </select>
+ </label>
+</div>
+
+<div class="stage" id="stage">
+ <div class="board" id="board">
+  <canvas class="layer" id="layer0"></canvas>
+  <div class="overlay">
+   <div class="floating-tool ruler" id="ruler">
+    <svg id="rulerSvg" viewBox="0 0 600 52" preserveAspectRatio="none"></svg>
+   </div>
+   <div class="floating-tool protractor" id="protractor">
+    <svg id="protractorSvg" viewBox="0 0 300 160"></svg>
+   </div>
+  </div>
+ </div>
+</div>
+
+<div class="panel" id="layerPanel">
+ <div style="display:flex;gap:6px;justify-content:space-between;align-items:center">
+  <b>📚 الطبقات</b>
+  <div>
+   <button onclick="addLayer()">＋</button>
+   <button onclick="moveLayerOrder(1)">↑</button>
+   <button onclick="moveLayerOrder(-1)">↓</button>
+   <button onclick="toggleLayers()">✕</button>
+  </div>
+ </div>
+ <div id="layersList"></div>
+</div>
+
+<div class="footer">
+ <button onclick="toggleLayers()" title="الطبقات">📚</button>
+ <button onclick="toggleRuler()" title="المسطرة">📏</button>
+ <button onclick="toggleProtractor()" title="المنقلة">📐</button>
+ <button onclick="showCalculator()" title="الحاسبة">🧮</button>
+ <button onclick="clearLayer()" title="مسح الطبقة">🗑️</button>
+ <button onclick="saveProject()" title="حفظ المشروع">💾</button>
+ <button onclick="loadProject()" title="فتح مشروع">📂</button>
+ <button onclick="exportPNG()" title="صورة PNG">🖼️</button>
+ <input type="file" id="projectFile" accept=".artpro,application/json" hidden>
+</div>
+
+</div>
+
+<div class="modal" id="modal">
+ <div class="modalbox">
+  <h3 id="modalTitle"></h3>
+  <div id="modalContent"></div>
+  <button onclick="closeModal()">إغلاق</button>
+ </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const board=document.getElementById('board');
+const stage=document.getElementById('stage');
+const colorInput=document.getElementById('color');
+const sizeInput=document.getElementById('size');
+const opacityInput=document.getElementById('opacity');
+
+let layers=[];
+let activeLayer=0;
+let tool='brush';
+let drawing=false;
+let startX=0,startY=0,lastX=0,lastY=0;
+let snapshot=null;
+let zoomLevel=1;
+let bg='#ffffff';
+let history=[];
+let historyIndex=-1;
+let moving=false;
+let moveStart=null;
+let rulerVisible=false;
+let protractorVisible=false;
+
+function createLayer(name){
+ const c=document.createElement('canvas');
+ c.className='layer';
+ c.width=board.clientWidth*devicePixelRatio;
+ c.height=board.clientHeight*devicePixelRatio;
+ c.style.zIndex=layers.length;
+ board.insertBefore(c,board.querySelector('.overlay'));
+ const layer={
+  canvas:c,
+  name:name||'طبقة '+(layers.length+1),
+  visible:true,
+  x:0,y:0
+ };
+ layers.push(layer);
+ return layer;
+}
+
+function getCtx(){
+ return layers[activeLayer].canvas.getContext('2d');
+}
+
+function initialize(){
+ layers=[];
+ board.querySelectorAll('.layer').forEach(c=>c.remove());
+ createLayer('الطبقة 1');
+ activeLayer=0;
+ updateLayers();
+ saveHistory();
+}
+
+function getSettings(){
+ return {
+  color:colorInput.value,
+  size:+sizeInput.value*devicePixelRatio,
+  opacity:+opacityInput.value/100,
+  shape:document.getElementById('brushShape').value
+ };
+}
+
+sizeInput.oninput=()=>{
+ document.getElementById('sizeVal').textContent=sizeInput.value;
+};
+
+function setActiveTool(t){
+ tool=t;
+ document.querySelectorAll('.tool').forEach(b=>{
+  b.classList.toggle('active',b.dataset.tool===t);
+ });
+}
+
+document.querySelectorAll('.tool').forEach(b=>{
+ b.onclick=()=>{
+  setActiveTool(b.dataset.tool);
+  if(tool==='text')addText();
+ };
+});
+
+function getPoint(e){
+ const c=layers[activeLayer].canvas;
+ const r=c.getBoundingClientRect();
+ return {
+  x:(e.clientX-r.left)*c.width/r.width,
+  y:(e.clientY-r.top)*c.height/r.height
+ };
+}
+
+function pointerDown(e){
+ if(e.pointerType==='touch'&&tool==='move'){}
+ const p=getPoint(e);
+ drawing=true;
+ layers[activeLayer].canvas.setPointerCapture(e.pointerId);
+ startX=lastX=p.x;
+ startY=lastY=p.y;
+
+ if(tool==='move'){
+  moving=true;
+  moveStart={x:e.clientX,y:e.clientY,
+   ox:layers[activeLayer].x,oy:layers[activeLayer].y};
+  return;
+ }
+
+ snapshot=getCtx().getImageData(0,0,
+  layers[activeLayer].canvas.width,
+  layers[activeLayer].canvas.height);
+
+ if(['brush','pencil','pen','soft','oil','water','charcoal','neon','eraser'].includes(tool)){
+  drawDot(p.x,p.y);
+ }
+}
+
+function pointerMove(e){
+ if(!drawing)return;
+
+ if(tool==='move'&&moving){
+  const l=layers[activeLayer];
+  const c=l.canvas;
+  const r=board.getBoundingClientRect();
+  l.x=moveStart.ox+(e.clientX-moveStart.x)*devicePixelRatio/zoomLevel;
+  l.y=moveStart.oy+(e.clientY-moveStart.y)*devicePixelRatio/zoomLevel;
+  c.style.transform=`translate(${l.x/devicePixelRatio}px,${l.y/devicePixelRatio}px)`;
+  return;
+ }
+
+ const p=getPoint(e);
+ if(['brush','pencil','pen','soft','oil','water','charcoal','neon','eraser'].includes(tool)){
+  drawStroke(lastX,lastY,p.x,p.y);
+  lastX=p.x;lastY=p.y;
+ }else{
+  getCtx().putImageData(snapshot,0,0);
+  drawShape(startX,startY,p.x,p.y);
+ }
+}
+
+function pointerUp(){
+ if(!drawing)return;
+ drawing=false;
+ moving=false;
+ saveHistory();
+ updateLayers();
+}
+
+function attachCanvas(c){
+ c.addEventListener('pointerdown',pointerDown);
+ c.addEventListener('pointermove',pointerMove);
+ c.addEventListener('pointerup',pointerUp);
+ c.addEventListener('pointercancel',pointerUp);
+}
+
+function drawDot(x,y){
+ const c=getCtx(),s=getSettings();
+ c.save();
+ c.globalAlpha=s.opacity;
+ c.fillStyle=s.color;
+
+ if(tool==='eraser'){
+  c.globalCompositeOperation='destination-out';
+  c.globalAlpha=1;
+ }
+ if(tool==='neon'){
+  c.shadowBlur=s.size*2;
+  c.shadowColor=s.color;
+ }
+ c.beginPath();
+ c.arc(x,y,Math.max(1,s.size/2),0,Math.PI*2);
+ c.fill();
+ c.restore();
+}
+
+function drawStroke(x1,y1,x2,y2){
+ const c=getCtx(),s=getSettings();
+ c.save();
+ c.globalAlpha=s.opacity;
+ c.strokeStyle=s.color;
+ c.fillStyle=s.color;
+ c.lineWidth=s.size;
+ c.lineCap=s.shape==='square'?'square':'round';
+ c.lineJoin='round';
+
+ if(tool==='eraser'){
+  c.globalCompositeOperation='destination-out';
+  c.globalAlpha=1;
+ }
+ if(tool==='pencil'){
+  c.globalAlpha*=.5;c.lineWidth*=.7;
+ }
+ if(tool==='soft'){
+  c.shadowBlur=s.size;c.shadowColor=s.color;
+ }
+ if(tool==='neon'){
+  c.shadowBlur=s.size*2;c.shadowColor=s.color;c.lineWidth*=1.5;
+ }
+ if(tool==='water'){
+  c.globalAlpha*=.22;
+  c.lineWidth*=2;
+  c.shadowBlur=s.size*.5;
+  c.shadowColor=s.color;
+ }
+ if(tool==='oil'){
+  c.lineWidth*=1.4;
+  c.shadowBlur=s.size*.15;
+  c.shadowColor=s.color;
+ }
+ if(tool==='charcoal'){
+  c.globalAlpha*=.4;
+  c.lineWidth*=1.6;
+ }
+ c.beginPath();
+ c.moveTo(x1,y1);
+ c.lineTo(x2,y2);
+ c.stroke();
+
+ if(tool==='neon'){
+  c.shadowBlur=0;
+  c.globalAlpha=s.opacity;
+  c.lineWidth=Math.max(1,s.size*.2);
+  c.stroke();
+ }
+ c.restore();
+}
+
+function drawShape(x1,y1,x2,y2){
+ const c=getCtx(),s=getSettings();
+ c.save();
+ c.globalAlpha=s.opacity;
+ c.strokeStyle=s.color;
+ c.lineWidth=s.size;
+ c.lineCap='round';
+ c.beginPath();
+
+ if(tool==='line'){
+  c.moveTo(x1,y1);c.lineTo(x2,y2);
+ }
+ if(tool==='rect'){
+  c.rect(x1,y1,x2-x1,y2-y1);
+ }
+ if(tool==='circle'){
+  c.ellipse((x1+x2)/2,(y1+y2)/2,
+  Math.abs(x2-x1)/2,Math.abs(y2-y1)/2,0,0,Math.PI*2);
+ }
+ if(tool==='triangle'){
+  c.moveTo((x1+x2)/2,y1);
+  c.lineTo(x2,y2);
+  c.lineTo(x1,y2);
+  c.closePath();
+ }
+ if(tool==='arrow'){
+  const a=Math.atan2(y2-y1,x2-x1);
+  const h=18*devicePixelRatio;
+  c.moveTo(x1,y1);c.lineTo(x2,y2);
+  c.moveTo(x2,y2);
+  c.lineTo(x2-h*Math.cos(a-.5),y2-h*Math.sin(a-.5));
+  c.moveTo(x2,y2);
+  c.lineTo(x2-h*Math.cos(a+.5),y2-h*Math.sin(a+.5));
+ }
+ if(tool==='chart'){
+  const left=Math.min(x1,x2),right=Math.max(x1,x2);
+  const top=Math.min(y1,y2),bottom=Math.max(y1,y2);
+  const w=right-left,h=bottom-top;
+  if(w>0&&h>0){
+   c.strokeStyle='#9ca3af';
+   c.lineWidth=1*devicePixelRatio;
+   for(let i=0;i<=10;i++){
+    let x=left+w*i/10,y=top+h*i/10;
+    c.beginPath();c.moveTo(x,top);c.lineTo(x,bottom);c.stroke();
+    c.beginPath();c.moveTo(left,y);c.lineTo(right,y);c.stroke();
+   }
+   c.strokeStyle=s.color;c.lineWidth=s.size;
+   c.beginPath();
+   c.moveTo(left,top+h/2);c.lineTo(right,top+h/2);
+   c.moveTo(left+w/2,top);c.lineTo(left+w/2,bottom);
+   c.stroke();
+  }
+  c.restore();return;
+ }
+ c.stroke();
+ c.restore();
+}
+
+function saveHistory(){
+ const states=layers.map(l=>({
+  image:l.canvas.toDataURL(),
+  name:l.name,visible:l.visible,x:l.x,y:l.y
+ }));
+ history=history.slice(0,historyIndex+1);
+ history.push(states);
+ if(history.length>20)history.shift();
+ historyIndex=history.length-1;
+}
+
+async function restoreHistory(index){
+ if(index<0||index>=history.length)return;
+ historyIndex=index;
+ const states=history[index];
+ layers.forEach(l=>l.canvas.remove());
+ layers=[];
+ for(const s of states){
+  const l=createLayer(s.name);
+  l.visible=s.visible;
+  l.canvas.style.display=s.visible?'block':'none';
+  l.x=s.x;l.y=s.y;
+  l.canvas.style.transform=`translate(${l.x/devicePixelRatio}px,${l.y/devicePixelRatio}px)`;
+  await loadImageToCanvas(s.image,l.canvas);
+ }
+ activeLayer=Math.min(activeLayer,layers.length-1);
+ updateLayers();
+}
+
+function undo(){if(historyIndex>0)restoreHistory(historyIndex-1)}
+function redo(){if(historyIndex<history.length-1)restoreHistory(historyIndex+1)}
+
+function loadImageToCanvas(src,c){
+ return new Promise(resolve=>{
+  const img=new Image();
+  img.onload=()=>{
+   const x=c.getContext('2d');
+   x.clearRect(0,0,c.width,c.height);
+   x.drawImage(img,0,0,c.width,c.height);
+   resolve();
+  };
+  img.src=src;
+ });
+}
+
+function addLayer(){
+ if(layers.length>=10){toast('الحد الأقصى 10 طبقات');return}
+ const l=createLayer();
+ attachCanvas(l.canvas);
+ activeLayer=layers.length-1;
+ saveHistory();
+ updateLayers();
+}
+
+function deleteLayer(i){
+ if(layers.length===1){toast('يجب الاحتفاظ بطبقة واحدة');return}
+ layers[i].canvas.remove();
+ layers.splice(i,1);
+ activeLayer=Math.max(0,Math.min(activeLayer,layers.length-1));
+ saveHistory();
+ updateLayers();
+}
+
+function toggleVisibility(i){
+ const l=layers[i];
+ l.visible=!l.visible;
+ l.canvas.style.display=l.visible?'block':'none';
+ saveHistory();
+ updateLayers();
+}
+
+function moveLayerOrder(direction){
+ const n=activeLayer+direction;
+ if(n<0||n>=layers.length)return;
+ const a=layers[activeLayer];
+ const b=layers[n];
+ const tmp=a.canvas;
+ if(direction>0){
+  board.insertBefore(b.canvas,a.canvas);
+ }else{
+  board.insertBefore(a.canvas,b.canvas);
+ }
+ const index=layers.indexOf(a);
+ layers.splice(index,1);
+ layers.splice(n,0,a);
+ activeLayer=n;
+ layers.forEach((l,i)=>l.canvas.style.zIndex=i);
+ saveHistory();
+ updateLayers();
+}
+
+function updateLayers(){
+ const list=document.getElementById('layersList');
+ list.innerHTML='';
+ layers.forEach((l,i)=>{
+  const row=document.createElement('div');
+  row.className='layer-row'+(i===activeLayer?' active':'');
+  const name=document.createElement('span');
+  name.className='layer-name';
+  name.textContent=l.name;
+  const select=document.createElement('button');
+  select.textContent='✥';
+  select.onclick=()=>{activeLayer=i;updateLayers()};
+  const visible=document.createElement('button');
+  visible.textContent=l.visible?'👁️':'🚫';
+  visible.onclick=()=>toggleVisibility(i);
+  const del=document.createElement('button');
+  del.textContent='✕';
+  del.onclick=()=>deleteLayer(i);
+  row.append(name,select,visible,del);
+  list.append(row);
+ });
+}
+
+function toggleLayers(){
+ const p=document.getElementById('layerPanel');
+ p.style.display=p.style.display==='block'?'none':'block';
+}
+
+function clearLayer(){
+ if(!confirm('مسح محتويات الطبقة الحالية؟'))return;
+ const c=getCtx();
+ c.clearRect(0,0,layers[activeLayer].canvas.width,layers[activeLayer].canvas.height);
+ saveHistory();
+}
+
+function zoom(amount){
+ zoomLevel=Math.max(.4,Math.min(3,zoomLevel+amount));
+ board.style.transform=`scale(${zoomLevel})`;
+}
+
+function addText(){
+ const t=prompt('اكتب النص:');
+ if(!t)return;
+ const c=getCtx(),s=getSettings();
+ const size=Math.max(14,s.size*2);
+ c.save();
+ c.fillStyle=s.color;
+ c.globalAlpha=s.opacity;
+ c.font=size+'px Arial';
+ c.textAlign='center';
+ c.textBaseline='middle';
+ t.split('\n').forEach((line,i)=>{
+  c.fillText(line,c.canvas.width/2,c.canvas.height/2+i*size*1.4);
+ });
+ c.restore();
+ saveHistory();
+}
+
+function toggleRuler(){
+ rulerVisible=!rulerVisible;
+ const r=document.getElementById('ruler');
+ r.style.display=rulerVisible?'block':'none';
+}
+
+function toggleProtractor(){
+ protractorVisible=!protractorVisible;
+ const p=document.getElementById('protractor');
+ p.style.display=protractorVisible?'block':'none';
+}
+
+function makeDraggable(el){
+ let active=false,dx=0,dy=0;
+ el.addEventListener('pointerdown',e=>{
+  active=true;
+  const r=el.getBoundingClientRect();
+  dx=e.clientX-r.left;dy=e.clientY-r.top;
+  el.setPointerCapture(e.pointerId);
+  e.stopPropagation();
+ });
+ el.addEventListener('pointermove',e=>{
+  if(!active)return;
+  const r=board.getBoundingClientRect();
+  el.style.left=(e.clientX-r.left-dx)/zoomLevel*100/board.clientWidth*board.clientWidth+'px';
+  el.style.top=(e.clientY-r.top-dy)/zoomLevel*100/board.clientHeight*board.clientHeight+'px';
+ });
+ el.addEventListener('pointerup',()=>active=false);
+}
+makeDraggable(document.getElementById('ruler'));
+makeDraggable(document.getElementById('protractor'));
+
+function createRuler(){
+ let svg=document.getElementById('rulerSvg');
+ let out='';
+ for(let i=0;i<=60;i++){
+  let x=i*10;
+  let h=i%10===0?27:i%5===0?19:10;
+  out+=`<line x1="${x}" y1="0" x2="${x}" y2="${h}" stroke="#222" stroke-width="1"/>`;
+  if(i%10===0)out+=`<text x="${x+2}" y="43" font-size="13" fill="#111">${i/10}</text>`;
+ }
+ svg.innerHTML=out;
+}
+
+function createProtractor(){
+ let svg=document.getElementById('protractorSvg');
+ let out='<path d="M10 150 A140 140 0 0 1 290 150" fill="#fff9" stroke="#222" stroke-width="2"/><line x1="10" y1="150" x2="290" y2="150" stroke="#222"/>';
+ for(let i=0;i<=180;i+=5){
+  let a=Math.PI-i*Math.PI/180;
+  let len=i%10===0?15:8;
+  let x1=150+Math.cos(a)*125;
+  let y1=150+Math.sin(a)*125;
+  let x2=150+Math.cos(a)*(125+len);
+  let y2=150+Math.sin(a)*(125+len);
+  out+=`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#222" stroke-width="1"/>`;
+  if(i%10===0){
+   let tx=150+Math.cos(a)*103;
+   let ty=150+Math.sin(a)*103;
+   out+=`<text x="${tx}" y="${ty}" font-size="9" text-anchor="middle" fill="#111">${i}</text>`;
+  }
+ }
+ svg.innerHTML=out;
+}
+
+function showCalculator(){
+ showModal('🧮 الآلة الحاسبة',`
+ <input id="calc" placeholder="العملية الحسابية">
+ <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:5px">
+ ${['7','8','9','/','4','5','6','*','1','2','3','-','0','.','=','+','C'].map(k=>`<button onclick="calcKey('${k}')">${k}</button>`).join('')}
+ </div><h3 id="calcResult"></h3>
+ `);
+}
+
+function calcKey(k){
+ const d=document.getElementById('calc');
+ if(k==='C'){d.value='';return}
+ if(k==='='){
+  try{
+   if(!/^[0-9+*/.() -]+$/.test(d.value))throw 0;
+   const v=Function('"use strict";return ('+d.value+')')();
+   if(!Number.isFinite(v))throw 0;
+   document.getElementById('calcResult').textContent=v;
+  }catch(e){
+   document.getElementById('calcResult').textContent='خطأ';
+  }
+ }else d.value+=k;
+}
+
+function showModal(title,content){
+ document.getElementById('modalTitle').textContent=title;
+ document.getElementById('modalContent').innerHTML=content;
+ document.getElementById('modal').style.display='flex';
+}
+function closeModal(){
+ document.getElementById('modal').style.display='none';
+}
+
+function toast(t){
+ const x=document.getElementById('toast');
+ x.textContent=t;x.style.display='block';
+ setTimeout(()=>x.style.display='none',2200);
+}
+
+document.getElementById('bg').onchange=e=>{
+ bg=e.target.value;
+ board.style.background=bg;
+};
+
+function exportPNG(){
+ const w=layers[0].canvas.width,h=layers[0].canvas.height;
+ const out=document.createElement('canvas');
+ out.width=w;out.height=h;
+ const c=out.getContext('2d');
+ c.fillStyle=bg;c.fillRect(0,0,w,h);
+ layers.forEach(l=>{
+  if(!l.visible)return;
+  c.drawImage(l.canvas,l.x,l.y);
+ });
+ const a=document.createElement('a');
+ a.download='ART-STUDIO-PRO.png';
+ a.href=out.toDataURL('image/png');
+ a.click();
+ toast('تم تصدير الصورة');
+}
+
+function saveProject(){
+ const data={
+  version:1,
+  background:bg,
+  width:layers[0].canvas.width,
+  height:layers[0].canvas.height,
+  layers:layers.map(l=>({
+   name:l.name,visible:l.visible,x:l.x,y:l.y,
+   image:l.canvas.toDataURL('image/png')
+  }))
+ };
+ const blob=new Blob([JSON.stringify(data)],{type:'application/json'});
+ const a=document.createElement('a');
+ a.href=URL.createObjectURL(blob);
+ a.download='My-Art-Project.artpro';
+ a.click();
+ URL.revokeObjectURL(a.href);
+ toast('تم حفظ المشروع');
+}
+
+function loadProject(){
+ document.getElementById('projectFile').click();
+}
+
+document.getElementById('projectFile').onchange=async e=>{
+ const file=e.target.files[0];
+ if(!file)return;
+ try{
+  const data=JSON.parse(await file.text());
+  if(!data.layers||!Array.isArray(data.layers)||!data.layers.length)throw 0;
+  layers.forEach(l=>l.canvas.remove());
+  layers=[];
+  bg=data.background||'#ffffff';
+  board.style.background=bg;
+  document.getElementById('bg').value=bg;
+
+  for(const item of data.layers){
+   const l=createLayer(item.name);
+   l.visible=item.visible!==false;
+   l.canvas.style.display=l.visible?'block':'none';
+   l.x=item.x||0;l.y=item.y||0;
+   l.canvas.style.transform=`translate(${l.x/devicePixelRatio}px,${l.y/devicePixelRatio}px)`;
+   await loadImageToCanvas(item.image,l.canvas);
+  }
+  activeLayer=layers.length-1;
+  history=[];historyIndex=-1;
+  updateLayers();
+  saveHistory();
+  toast('تم فتح المشروع');
+ }catch(err){
+  toast('تعذر فتح المشروع');
+ }
+ e.target.value='';
+};
+
+// دعم التكبير بإصبعين
+let pinchStart=null;
+stage.addEventListener('touchstart',e=>{
+ if(e.touches.length===2){
+  const a=e.touches[0],b=e.touches[1];
+  pinchStart=Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);
+ }
+},{passive:true});
+
+stage.addEventListener('touchmove',e=>{
+ if(e.touches.length===2&&pinchStart){
+  const a=e.touches[0],b=e.touches[1];
+  const d=Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);
+  const ratio=d/pinchStart;
+  zoomLevel=Math.max(.4,Math.min(3,zoomLevel*ratio));
+  board.style.transform=`scale(${zoomLevel})`;
+  pinchStart=d;
+ }
+},{passive:true});
+
+stage.addEventListener('touchend',()=>pinchStart=null);
+
+function setup(){
+ createRuler();
+ createProtractor();
+ const l=layers[0];
+ attachCanvas(l.canvas);
+ board.style.background=bg;
+}
+initialize();
+setup();
+</script>
+</body>
+</html>
